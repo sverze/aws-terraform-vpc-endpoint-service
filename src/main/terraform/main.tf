@@ -1,3 +1,8 @@
+provider "aws" {
+  region                        = "${var.aws_region}"
+  profile                       = "${var.aws_profile}"
+}
+
 # Sets up the entire network including gateways
 module "aws_vpc" {
   source                   = "./vpc"

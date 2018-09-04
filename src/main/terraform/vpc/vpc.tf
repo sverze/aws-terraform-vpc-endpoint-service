@@ -1,9 +1,3 @@
-# Specify the provider and access details
-provider "aws" {
-  region                       = "${var.aws_region}"
-  profile                      = "${var.aws_profile}"
-}
-
 ################        VPC        ################
 
 
@@ -29,6 +23,61 @@ resource "aws_vpc" "vpc_2" {
   }
 }
 
+################   VPC Flow Logs    ################
+
+data "template_file" "vpc_flow_log_assume_role" {
+  template                     = "${file("${path.module}/vpc_flow_log_assume_role.json")}"
+}
+
+data "template_file" "vpc_flow_log_policy" {
+  template                     = "${file("${path.module}/vpc_flow_log_policy.json")}"
+}
+
+resource "aws_iam_role" "iam_log_role" {
+  name                         = "${var.environment_name}_vpc_flow_log_role"
+  assume_role_policy           = "${data.template_file.vpc_flow_log_assume_role.rendered}"
+}
+
+resource "aws_iam_role_policy" "log_policy" {
+  name                         = "${var.environment_name}_vpc_flow_log_policy"
+  role                         = "${aws_iam_role.iam_log_role.id}"
+  policy                       = "${data.template_file.vpc_flow_log_policy.rendered}"
+}
+
+resource "aws_cloudwatch_log_group" "vpc_1_flow_log_group" {
+  name                         = "${var.environment_name}_vpc_1_flow_log_group"
+}
+
+resource "aws_flow_log" "vpc_1_flow_log" {
+  log_group_name               = "${aws_cloudwatch_log_group.vpc_1_flow_log_group.name}"
+  iam_role_arn                 = "${aws_iam_role.iam_log_role.arn}"
+  vpc_id                       = "${aws_vpc.vpc_1.id}"
+  traffic_type                 = "ALL"
+}
+
+resource "aws_cloudwatch_log_group" "vpc_2_flow_log_group" {
+  name                         = "${var.environment_name}_vpc_2_flow_log_group"
+}
+
+resource "aws_flow_log" "vpc_2_flow_log" {
+  log_group_name               = "${aws_cloudwatch_log_group.vpc_2_flow_log_group.name}"
+  iam_role_arn                 = "${aws_iam_role.iam_log_role.arn}"
+  vpc_id                       = "${aws_vpc.vpc_2.id}"
+  traffic_type                 = "ALL"
+}
+
+resource "aws_s3_bucket" "log_bucket" {
+  bucket                       = "${var.environment_name}-log-bucket"
+  acl                          = "private"
+
+  versioning {
+    enabled = true
+  }
+
+  tags {
+    Name                       = "${var.environment_name}-log-bucket"
+  }
+}
 
 ################ Internet Gateway  ################
 

@@ -1,7 +1,7 @@
 
 variable "environment_name" {
   description = "The name of the environment"
-  default     = "vpc_se_dev"
+  default     = "vpc-se-dev"
 }
 
 variable "aws_region" {
